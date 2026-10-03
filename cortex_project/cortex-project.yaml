@@ -1,0 +1,12 @@
+version: 1
+artifacts:
+  - path: FRAUD_RISK_ANALYTICS.sv.yaml
+    type: semantic_view
+    targets:
+      default:
+        object: REGINTEL360.RISK.FRAUD_RISK_ANALYTICS
+  - path: REGINTEL_RISK_SEMANTIC.sv.yaml
+    type: semantic_view
+    targets:
+      default:
+        object: REGINTEL360.RISK.REGINTEL_RISK_SEMANTIC

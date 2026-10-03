@@ -1,0 +1,264 @@
+name: FRAUD_RISK_ANALYTICS
+description: This semantic view supports fraud detection and regulatory risk analytics.
+  It models financial transactions at the individual transaction level and links them
+  to system-generated risk alerts. It enables analysis of fraud patterns, suspicious
+  activity rates, risk scoring, and geographic or channel-based exposure. The view
+  covers all transaction channels and merchant categories but excludes manually reviewed
+  case outcomes.
+tables:
+- name: TRANSACTIONS
+  base_table:
+    database: REGINTEL360
+    schema: RISK
+    table: TRANSACTIONS
+  primary_key:
+    columns:
+    - TRANSACTION_ID
+  dimensions:
+  - name: TRANSACTION_ID
+    expr: TRANSACTION_ID
+    data_type: VARCHAR
+    description: Unique identifier for each financial transaction. Each value represents
+      exactly one processed transaction across all channels and is the primary key
+      for transaction-level analysis.
+  - name: CUSTOMER_ID
+    expr: CUSTOMER_ID
+    data_type: VARCHAR
+    description: Identifier for the customer who initiated the transaction. Multiple
+      transactions may share the same customer, enabling customer-level aggregation
+      and behavioral analysis.
+  - name: COUNTRY
+    expr: COUNTRY
+    data_type: VARCHAR
+    description: Two-letter country code where the transaction originated. Values
+      include US, GB, FR, NL, CA, AU, and others. Used to segment transactions by
+      geography for regional risk exposure analysis.
+    sample_values:
+    - AE
+    - AU
+    - CA
+    - DE
+    - FR
+    - GB
+    - IN
+    - NL
+    - SG
+    - US
+    is_enum: true
+  - name: CURRENCY
+    expr: CURRENCY
+    data_type: VARCHAR
+    description: ISO currency code of the transaction amount. Values include USD,
+      EUR, INR, and SGD. Used to analyze cross-currency transaction patterns and exposure.
+    sample_values:
+    - EUR
+    - GBP
+    - INR
+    - SGD
+    - USD
+    is_enum: true
+  - name: CHANNEL
+    expr: CHANNEL
+    data_type: VARCHAR
+    description: The channel through which the transaction was initiated. Values are
+      ONLINE, MOBILE, API, and BRANCH. Used to compare fraud rates and volumes across
+      distribution channels.
+    sample_values:
+    - API
+    - BRANCH
+    - MOBILE
+    - ONLINE
+    is_enum: true
+  - name: MERCHANT_CATEGORY
+    expr: MERCHANT_CATEGORY
+    data_type: VARCHAR
+    description: Business category of the merchant receiving the payment. Values include
+      CRYPTO, GAMING, CASH_EQUIVALENT, ELECTRONICS, JEWELRY, TRAVEL, CHARITY, RETAIL,
+      and PROFESSIONAL_SERVICES. High-risk categories such as CRYPTO, GAMING, and
+      CASH_EQUIVALENT are key indicators in fraud pattern detection.
+    sample_values:
+    - CASH_EQUIVALENT
+    - CHARITY
+    - CRYPTO
+    - ELECTRONICS
+    - GAMING
+    - JEWELRY
+    - PROFESSIONAL_SERVICES
+    - RETAIL
+    - TRAVEL
+    is_enum: true
+  - name: PAYMENT_METHOD
+    expr: PAYMENT_METHOD
+    data_type: VARCHAR
+    description: The payment instrument used for the transaction. Values include CARD,
+      WIRE, SEPA, ACH, and others. Used to analyze fraud prevalence across different
+      payment rails.
+    sample_values:
+    - ACH
+    - CARD
+    - SEPA
+    - UPI
+    - WIRE
+    is_enum: true
+  - name: LABEL
+    expr: LABEL
+    data_type: VARCHAR
+    description: Fraud classification assigned to the transaction. Values are NORMAL
+      for legitimate activity, and STRUCTURING, RAPID_VELOCITY, or HIGH_RISK_MERCHANT
+      for suspicious patterns. Approximately 95% of transactions are labeled NORMAL.
+    sample_values:
+    - HIGH_RISK_MERCHANT
+    - NORMAL
+    - RAPID_VELOCITY
+    - STRUCTURING
+    is_enum: true
+  time_dimensions:
+  - name: TRANSACTION_TS
+    expr: TRANSACTION_TS
+    data_type: TIMESTAMP_NTZ
+    description: Timestamp when the transaction was processed. Stored without time
+      zone. Serves as the primary time reference for trend analysis, daily volume
+      monitoring, and time-windowed fraud detection.
+  facts:
+  - name: AMOUNT
+    expr: AMOUNT
+    data_type: NUMBER
+    description: Monetary value of the transaction in the denomination specified by
+      CURRENCY. Ranges from small-value payments to amounts exceeding 40,000. Used
+      to calculate total exposure, average transaction size, and to identify structuring
+      patterns where amounts cluster just below reporting thresholds.
+  description: Represents individual financial transactions processed across all channels.
+    Each row corresponds to one transaction by a single customer. Serves as the primary
+    fact table for volume, monetary exposure, and fraud-rate analysis. Links to risk
+    alerts for transactions that triggered automated detection rules.
+  metrics:
+  - name: TOTAL_AMOUNT
+    description: Total monetary value across all transactions. Fully additive across
+      all dimensions. Currency mix should be considered when interpreting cross-currency
+      totals.
+    expr: SUM(AMOUNT)
+  - name: TRANSACTION_COUNT
+    description: Total number of transactions processed. Fully additive across all
+      dimensions. Serves as the baseline denominator for fraud rate calculations.
+    expr: COUNT(TRANSACTION_ID)
+  - name: AVERAGE_TRANSACTION_AMOUNT
+    description: Average monetary value per transaction. Useful for detecting anomalies
+      where average size deviates significantly from the baseline by channel, country,
+      or merchant category.
+    expr: AVG(AMOUNT)
+  - name: FLAGGED_TRANSACTION_COUNT
+    description: Number of transactions classified as suspicious. Includes STRUCTURING,
+      RAPID_VELOCITY, and HIGH_RISK_MERCHANT labels. Excludes transactions labeled
+      NORMAL.
+    expr: COUNT_IF(LABEL <> 'NORMAL')
+- name: RISK_ALERTS
+  base_table:
+    database: REGINTEL360
+    schema: RISK
+    table: RISK_ALERTS
+  primary_key:
+    columns:
+    - ALERT_ID
+  dimensions:
+  - name: ALERT_ID
+    expr: ALERT_ID
+    data_type: VARCHAR
+    description: Unique identifier for each risk alert. Each value represents exactly
+      one alert instance and serves as the primary key for alert-level analysis.
+  - name: TRANSACTION_ID
+    expr: TRANSACTION_ID
+    data_type: VARCHAR
+    description: Identifier of the transaction that triggered this alert. Links each
+      alert back to the originating transaction for investigation and enrichment.
+  - name: CUSTOMER_ID
+    expr: CUSTOMER_ID
+    data_type: VARCHAR
+    description: Identifier of the customer associated with the alerted transaction.
+      Enables customer-level alert aggregation to identify repeat offenders or high-risk
+      accounts.
+  - name: PATTERN
+    expr: PATTERN
+    data_type: VARCHAR
+    description: Classification of the detected fraud pattern. Values include STRUCTURING
+      for threshold-avoidance behavior, RAPID_VELOCITY for unusually frequent transactions,
+      and HIGH_RISK_MERCHANT for transactions with high-risk merchant categories.
+    sample_values:
+    - HIGH_RISK_MERCHANT
+    - RAPID_VELOCITY
+    - STRUCTURING
+    is_enum: true
+  - name: REASON
+    expr: REASON
+    data_type: VARCHAR
+    description: Human-readable explanation of why the alert was generated. Includes
+      the specific rule evidence such as daily transaction count, structuring count,
+      amount, and merchant category that contributed to the risk score.
+  time_dimensions:
+  - name: CREATED_AT
+    expr: CREATED_AT
+    data_type: TIMESTAMP_NTZ
+    description: Timestamp when the risk alert was generated by the detection engine.
+      Used to track alert volume over time and measure detection latency relative
+      to the originating transaction.
+  facts:
+  - name: RISK_SCORE
+    expr: RISK_SCORE
+    data_type: NUMBER
+    description: Numeric risk score assigned to the alert, ranging from 0 to 100.
+      Higher values indicate greater likelihood of fraudulent activity. Calculated
+      by combining rule-based signals including structuring patterns, transaction
+      velocity, high-value amounts, and high-risk merchant categories. Used to prioritize
+      alerts for compliance review.
+  description: Represents automated risk alerts generated by fraud detection rules.
+    Each row corresponds to one alert raised against a specific transaction. A single
+    transaction may generate multiple alerts if it matches more than one detection
+    pattern. Provides risk scores and pattern classifications for compliance investigation.
+  metrics:
+  - name: ALERT_COUNT
+    description: Total number of risk alerts generated. A single transaction may produce
+      multiple alerts if it matches more than one detection rule.
+    expr: COUNT(ALERT_ID)
+  - name: AVERAGE_RISK_SCORE
+    description: Average risk score across alerts. Scores range from 0 to 100. Higher
+      averages indicate elevated risk exposure for the filtered population.
+    expr: AVG(RISK_SCORE)
+relationships:
+- name: RISK_ALERTS_TO_TRANSACTIONS
+  left_table: RISK_ALERTS
+  right_table: TRANSACTIONS
+  relationship_columns:
+  - left_column: TRANSACTION_ID
+    right_column: TRANSACTION_ID
+verified_queries:
+- name: 0;1
+  question: What is the transaction count and total amount by fraud label?
+  sql: SELECT LABEL, COUNT(*) AS transaction_count, SUM(AMOUNT) AS total_amount FROM
+    transactions GROUP BY LABEL ORDER BY total_amount DESC
+  verified_at: 1790945262
+  verified_by: Semantic Model Generator
+- name: 1;1
+  question: Which countries have the most flagged transactions?
+  sql: SELECT COUNTRY, COUNT(*) AS flagged_count FROM transactions WHERE LABEL <>
+    'NORMAL' GROUP BY COUNTRY ORDER BY flagged_count DESC
+  verified_at: 1790945262
+  verified_by: Semantic Model Generator
+- name: 2;1
+  question: What is the alert count and average risk score by merchant category?
+  sql: SELECT t.MERCHANT_CATEGORY, COUNT(DISTINCT r.ALERT_ID) AS alert_count, AVG(r.RISK_SCORE)
+    AS avg_risk_score FROM transactions AS t JOIN risk_alerts AS r ON t.TRANSACTION_ID
+    = r.TRANSACTION_ID GROUP BY t.MERCHANT_CATEGORY ORDER BY alert_count DESC
+  verified_at: 1790945262
+  verified_by: Semantic Model Generator
+- name: 3;1
+  question: What are the most common fraud patterns and their average risk scores?
+  sql: SELECT r.PATTERN, COUNT(*) AS alert_count, AVG(r.RISK_SCORE) AS avg_score FROM
+    risk_alerts AS r GROUP BY r.PATTERN ORDER BY alert_count DESC
+  verified_at: 1790945262
+  verified_by: Semantic Model Generator
+- name: 4;1
+  question: What is the overall fraud rate?
+  sql: SELECT COUNT(*) AS total_transactions, COUNT_IF(LABEL <> 'NORMAL') AS flagged_transactions,
+    ROUND(COUNT_IF(LABEL <> 'NORMAL') / COUNT(*) * 100, 2) AS fraud_rate_pct FROM
+    transactions
+  verified_at: 1790945262
+  verified_by: Semantic Model Generator

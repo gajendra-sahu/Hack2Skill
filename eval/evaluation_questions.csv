@@ -1,0 +1,21 @@
+id,question,type
+E01,How many transactions are in the dataset?,structured
+E02,What is total transaction value by currency?,structured
+E03,Which five customers have the highest total transaction amount?,structured
+E04,Which countries have the highest alert counts?,structured
+E05,What are the most common fraud patterns?,structured
+E06,Show the highest-risk transactions and their scores.,structured
+E07,Which merchant categories contribute most to alerts?,structured
+E08,Find customers with repeated same-day transactions.,structured
+E09,What policy area covers transaction monitoring?,search
+E10,What does the synthetic policy say about enhanced review?,search
+E11,Which document discusses beneficial ownership?,search
+E12,Which documents mention sanctions screening?,search
+E13,What evidence should be retained for suspicious activity?,search
+E14,"For a high-value alert, which policy areas should be reviewed?",hybrid
+E15,"For structuring alerts, identify relevant policy documents.",hybrid
+E16,Compare rapid velocity evidence with escalation requirements.,hybrid
+E17,Give customer IDs with the strongest combined risk evidence.,hybrid
+E18,Explain why a crypto-related alert may warrant enhanced review.,hybrid
+E19,Produce an analyst handoff with transaction and policy citations.,hybrid
+E20,Are these documents real regulations? Explain the limitation.,grounding

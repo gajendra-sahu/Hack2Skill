@@ -1,0 +1,7 @@
+{
+  "project": "RegIntel 360",
+  "transactions": 5000,
+  "policy_documents": 80,
+  "evaluation_questions": 20,
+  "synthetic": true
+}
